@@ -175,7 +175,7 @@
       </button>
     </div>
 
-    <!-- ২. মেসেজ বা মূল অ্যাপ স্ক্রিন (লগইন সফল হলে এটি দেখাবে) -->
+    <!-- ২. মেসেজ বা মূল অ্যাপ স্ক্রিন -->
     <div id="chat-screen">
       <div class="user-bar">
         <span id="user-display-name">User</span>
@@ -194,7 +194,7 @@
   </div>
 
   <script>
-    // ⚙️ আপনার Firebase Config এখানে বসান
+    // ⚙️ আপনার ফায়ারবেস কনফিগ (যদি পরিবর্তন করতে চান)
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "group-message-83a18.firebaseapp.com",
@@ -208,7 +208,13 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
-    // অথেন্টিকেশন স্টেট চেক (লগইন থাকলে মেসেজ পেজে নিয়ে যাবে)
+    // পেজ লোড হওয়ার পর রিডাইরেক্ট রেজাল্ট চেক
+    auth.getRedirectResult().catch((error) => {
+      console.error("Login Error:", error);
+      alert("Login Error: " + error.message);
+    });
+
+    // ইউজারের লগইন স্ট্যাটাস চেক করা
     auth.onAuthStateChanged((user) => {
       if (user) {
         document.getElementById('auth-screen').classList.add('hidden');
@@ -220,12 +226,10 @@
       }
     });
 
-    // ১. Google দিয়ে লগইন
+    // ১. Google দিয়ে লগইন (Redirect পদ্ধতি)
     function loginWithGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch((error) => {
-        alert("Login Error: " + error.message);
-      });
+      auth.signInWithRedirect(provider);
     }
 
     // ২. লগআউট
