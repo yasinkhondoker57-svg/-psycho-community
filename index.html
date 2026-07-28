@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Group Message</title>
+
+  <!-- Google Fonts & FontAwesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-color: #fff0f3;
+      --card-bg: #ffffff;
+      --text-main: #1f2937;
+      --text-sub: #6b7280;
+      --primary-pink: #ff4d6d;
+      --primary-hover: #ff2a54;
+      --border-color: #ffe0e6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+
+    .app-frame {
+      width: 100%; max-width: 450px; height: 100vh; background: var(--card-bg); position: relative; overflow: hidden; display: flex; flex-direction: column;
+    }
+
+    /* Pull to Refresh Indicator UI */
+    #refresh-indicator {
+      position: absolute; top: -50px; left: 50%; transform: translateX(-50%);
+      background: var(--primary-pink); color: #fff; width: 40px; height: 40px;
+      border-radius: 50%; display: flex; justify-content: center; align-items: center;
+      z-index: 10000; transition: top 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+
+    .view-screen { display: flex; flex-direction: column; height: 100%; width: 100%; position: absolute; top: 0; left: 0; background: var(--bg-color); z-index: 1; transition: 0.2s ease; overflow-y: auto; }
+    .hidden { display: none !important; }
+
+    /* Alert Box */
+    .alert-box {
+      position: fixed; top: 15px; left: 50%; transform: translateX(-50%); background: #ef4444; color: #fff; padding: 12px 18px; border-radius: 20px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); display: none; z-index: 9999; text-align: center; width: 90%; max-width: 380px;
+    }
+
+    /* Auth Page UI Clean Design */
+    .auth-container { padding: 30px 24px; display: flex; flex-direction: column; justify-content: center; height: 100%; background: var(--card-bg); }
+    .auth-header { text-align: center; margin-bottom: 25px; }
+    .auth-header h2 { font-family: 'Outfit'; font-size: 28px; color: var(--primary-pink); margin-bottom: 6px; }
+    .auth-header p { font-size: 13px; color: var(--text-sub); line-height: 1.5; }
+    .bilingual-hint { font-size: 11px; color: #888; margin-top: 4px; display: block; }
+
+    .input-group { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 14px; padding: 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; }
+    .input-group i { color: var(--primary-pink); font-size: 18px; }
+    .input-group input { border: none; background: transparent; width: 100%; outline: none; font-size: 15px; color: var(--text-main); }
+    
+    .btn-primary { background: var(--primary-pink); color: #fff; border: none; width: 100%; padding: 16px; border-radius: 14px; font-weight: 700; font-size: 15px; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 77, 109, 0.3); transition: 0.2s; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* App Bar */
+    .app-bar { padding: 14px 18px; background: var(--card-bg); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+    .app-bar h2 { font-family: 'Outfit'; color: var(--primary-pink); font-size: 22px; }
+
+    /* Bottom Navigation Bar */
+    .bottom-nav { height: 60px; background: var(--card-bg); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; align-items: center; position: absolute; bottom: 0; width: 100%; z-index: 10; }
+    .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-sub); border: none; background: transparent; cursor: pointer; font-size: 11px; font-weight: 600; }
+    .nav-btn.active { color: var(--primary-pink); }
+    .nav-btn i { font-size: 20px; }
+  </style>
+</head>
+<body>
+
+  <div class="app-frame" id="app-frame">
+
+    <!-- Refresh Circle Indicator -->
+    <div id="refresh-indicator"><i class="fa-solid fa-rotate-right"></i></div>
+
+    <div id="app-alert" class="alert-box">Error Message</div>
+
+    <!-- 1. SINGLE PAGE AUTH UI -->
+    <section id="view-auth" class="view-screen">
+      <div class="auth-container">
+        <div class="auth-header">
+          <h2>Welcome Back</h2>
+          <p>Enter your mobile number with country code</p>
+          <span class="bilingual-hint">Please check your country code before number / নাম্বারের আগে আপনার দেশের কোডটি লিখুন</span>
+        </div>
+
+        <!-- Phone Form -->
+        <form id="form-phone">
+          <div class="input-group">
+            <i class="fa-solid fa-phone"></i>
+            <input type="tel" id="input-phone" placeholder="+8801777355727" value="+880" required>
+          </div>
+          <button type="submit" id="btn-send-otp" class="btn-primary">Send OTP Code</button>
+        </form>
+
+        <!-- OTP Form -->
+        <form id="form-otp" class="hidden" style="margin-top: 15px;">
+          <div class="input-group">
+            <i class="fa-solid fa-shield-halved"></i>
+            <input type="number" id="input-otp" placeholder="Enter 6-digit OTP" required>
+          </div>
+          <button type="submit" id="btn-verify-otp" class="btn-primary">Verify & Sign In</button>
+        </form>
+
+        <div id="recaptcha-container"></div>
+      </div>
+    </section>
+
+    <!-- 2. HOME / CHATS VIEW -->
+    <section id="view-chats" class="view-screen hidden">
+      <div class="app-bar">
+        <h2>Group Message</h2>
+      </div>
+      <div style="padding: 20px; text-align: center;">
+        <h3>Login Successful!</h3>
+        <p style="color: var(--text-sub); margin-top: 10px;">Welcome to Group Message App.</p>
+      </div>
+
+      <nav class="bottom-nav">
+        <button class="nav-btn active"><i class="fa-solid fa-comment-dots"></i><span>Chats</span></button>
+        <button class="nav-btn"><i class="fa-solid fa-user"></i><span>Profile</span></button>
+        <button class="nav-btn"><i class="fa-solid fa-ellipsis"></i><span>Settings</span></button>
+      </nav>
+    </section>
+
+    <!-- NEW FEATURE MODULES HERE -->
+
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getAuth, 
+      RecaptchaVerifier, 
+      signInWithPhoneNumber, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRW_noSwnwWhbbuOqcVjd4BhCTNTUC4Gg",
+      authDomain: "group-message-83a18.firebaseapp.com",
+      projectId: "group-message-83a18",
+      storageBucket: "group-message-83a18.firebasestorage.app",
+      messagingSenderId: "292133778661",
+      appId: "1:292133778661:web:1e414a325da7fb4bc0d00c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let confirmationResult;
+
+    function showAlert(msg) {
+      const alertBox = document.getElementById('app-alert');
+      alertBox.innerText = msg;
+      alertBox.style.display = 'block';
+      setTimeout(() => alertBox.style.display = 'none', 4000);
+    }
+
+    // Setup Invisible Recaptcha
+    function initRecaptcha() {
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'invisible',
+          'callback': () => {}
+        });
+      }
+    }
+
+    window.onload = () => { initRecaptcha(); };
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        document.getElementById('view-auth').classList.add('hidden');
+        document.getElementById('view-chats').classList.remove('hidden');
+      }
+    });
+
+    // 1. Send OTP
+    document.getElementById('form-phone').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const phone = document.getElementById('input-phone').value.trim();
+      const btn = document.getElementById('btn-send-otp');
+
+      if (!phone.startsWith('+') || phone.length < 10) {
+        showAlert("Check your country code / নাম্বারের আগে দেশের কোড দিন (+880...)");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Sending...';
+
+      try {
+        initRecaptcha();
+        const verifier = window.recaptchaVerifier;
+        confirmationResult = await signInWithPhoneNumber(auth, phone, verifier);
+        
+        showAlert("OTP Sent! Enter code.");
+        document.getElementById('form-phone').classList.add('hidden');
+        document.getElementById('form-otp').classList.remove('hidden');
+      } catch (err) {
+        console.error(err);
+        showAlert(err.message || "Error sending code. Try again.");
+        if (window.recaptchaVerifier) window.recaptchaVerifier.render().then(id => grecaptcha.reset(id));
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Send OTP Code';
+      }
+    });
+
+    // 2. Verify OTP
+    document.getElementById('form-otp').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = document.getElementById('input-otp').value.trim();
+      const btn = document.getElementById('btn-verify-otp');
+
+      btn.disabled = true;
+      btn.innerText = 'Verifying...';
+
+      try {
+        const result = await confirmationResult.confirm(code);
+        await setDoc(doc(db, "users", result.user.uid), {
+          phone: result.user.phoneNumber,
+          lastLogin: new Date().toISOString()
+        }, { merge: true });
+
+        document.getElementById('view-auth').classList.add('hidden');
+        document.getElementById('view-chats').classList.remove('hidden');
+      } catch (err) {
+        showAlert("Incorrect OTP Code!");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Verify & Sign In';
+      }
+    });
+
+    /* =========================================
+       📱 PULL TO REFRESH LOGIC (সোয়াইপ করে রিফ্রেশ)
+       ========================================= */
+    let startY = 0;
+    let currentY = 0;
+    let refreshing = false;
+    const appFrame = document.getElementById('app-frame');
+    const refreshIndicator = document.getElementById('refresh-indicator');
+
+    appFrame.addEventListener('touchstart', (e) => {
+      if (appFrame.scrollTop === 0) {
+        startY = e.touches[0].pageY;
+      }
+    }, { passive: true });
+
+    appFrame.addEventListener('touchmove', (e) => {
+      if (startY === 0 || refreshing) return;
+      currentY = e.touches[0].pageY;
+      const distance = currentY - startY;
+
+      if (distance > 0) {
+        const pullHeight = Math.min(distance * 0.4, 70);
+        refreshIndicator.style.top = `${pullHeight - 40}px`;
+        refreshIndicator.style.transform = `translateX(-50%) rotate(${pullHeight * 5}deg)`;
+      }
+    }, { passive: true });
+
+    appFrame.addEventListener('touchend', () => {
+      const distance = currentY - startY;
+      if (distance > 120 && !refreshing) {
+        refreshing = true;
+        refreshIndicator.style.top = '15px';
+        setTimeout(() => {
+          window.location.reload();
+        }, 600);
+      } else {
+        refreshIndicator.style.top = '-50px';
+      }
+      startY = 0;
+      currentY = 0;
+    });
+
+    // FUTURE JAVASCRIPT FUNCTIONS HERE
+  </script>
+</body>
+</html>
