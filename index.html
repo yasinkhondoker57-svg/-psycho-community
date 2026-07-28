@@ -5,26 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Group Message</title>
   
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDKs (Compat Version) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
-    /* টেক্সট সিলেকশন ও লং প্রেস লক করার জন্য CSS */
+    /* ১. লং প্রেস ও টেক্সট সিলেকশন সম্পূর্ণ বন্ধ */
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      -webkit-user-select: none; /* Safari */
-      -moz-user-select: none;    /* Firefox */
-      -ms-user-select: none;     /* IE10+/Edge */
-      user-select: none;         /* Standard */
-      -webkit-touch-callout: none; /* iOS/Android Long Press Disabled */
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
     }
 
     body {
-      background-color: #fff0f3;
+      background-color: #f4f6f9;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -38,165 +39,413 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    /* ২. প্রারম্ভিক স্প্ল্যাশ স্ক্রিন এনিমেশন */
+    #splash-screen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, #ff4b6e, #ff758c);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      color: white;
+      transition: opacity 0.6s ease, visibility 0.6s;
+    }
+
+    .app-logo-animated {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      animation: bounce 1.8s infinite alternate;
+    }
+
+    .app-logo-animated svg {
+      fill: #ff4b6e;
+      width: 45px;
+      height: 45px;
+    }
+
+    @keyframes bounce {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(-15px) scale(1.05); }
+    }
+
+    #splash-screen h1 {
+      margin-top: 20px;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    /* ৩. লগইন / সাইনআপ UI */
+    #auth-screen {
+      flex: 1;
+      padding: 30px 25px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .auth-card {
+      width: 100%;
+      text-align: center;
+    }
+
+    .auth-icon {
+      width: 70px;
+      height: 70px;
+      background: #ffe5ec;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px auto;
+    }
+
+    .auth-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #222;
+      margin-bottom: 6px;
+    }
+
+    .auth-subtitle {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 25px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+      text-align: left;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 14px 16px;
+      background: #f8f9fa;
+      border: 1.5px solid #e9ecef;
+      border-radius: 12px;
+      font-size: 15px;
+      color: #333;
+      outline: none;
+      transition: all 0.2s ease;
+      -webkit-user-select: text;
+      user-select: text;
+    }
+
+    .input-field:focus {
+      border-color: #ff4b6e;
+      background: #fff;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #ff4b6e, #ff6b8b);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+      box-shadow: 0 4px 15px rgba(255, 75, 110, 0.3);
+    }
+
+    .toggle-auth {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #ff4b6e;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ৪. মেইন অ্যাপ UI */
+    #main-app {
+      display: none;
+      flex-direction: column;
+      height: 100%;
     }
 
     header {
       background: #ff4b6e;
       color: white;
-      padding: 18px;
+      padding: 16px;
       text-align: center;
-      font-size: 20px;
-      font-weight: bold;
+      font-size: 18px;
+      font-weight: 700;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
 
-    /* Auth Screen */
-    #auth-screen {
-      padding: 30px 20px;
+    .content-area {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      flex: 1;
-      text-align: center;
+      overflow: hidden;
+      position: relative;
     }
 
-    #auth-screen h2 {
-      color: #ff4b6e;
-      margin-bottom: 8px;
-      font-size: 26px;
-    }
-
-    #auth-screen p {
-      color: #666;
-      font-size: 14px;
-      margin-bottom: 30px;
-    }
-
-    .btn-google {
-      width: 100%;
-      padding: 14px;
-      background: #ffffff;
-      border: 2px solid #e0e0e0;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      font-size: 16px;
-      font-weight: 600;
-      color: #444;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-
-    /* Chat Screen */
-    #chat-screen {
+    .tab-page {
       display: none;
       flex-direction: column;
-      flex: 1;
+      height: 100%;
+      width: 100%;
     }
 
-    .user-bar {
-      background: #ffe5ec;
-      padding: 10px 15px;
+    .tab-page.active {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
-      color: #333;
-      border-bottom: 1px solid #ffd1dc;
     }
 
-    .logout-btn {
-      background: #ff4b6e;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .message-area {
+    /* চ্যাট সিস্টেম */
+    .message-list {
       flex: 1;
       padding: 15px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
+      background: #fdfbfb;
     }
 
-    .chat-input-container {
-      display: flex;
+    .message-bubble {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+
+    .msg-received {
+      background: #ffffff;
+      align-self: flex-start;
+      border: 1px solid #eee;
+      border-bottom-left-radius: 2px;
+      color: #333;
+    }
+
+    .msg-sent {
+      background: #ff4b6e;
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 2px;
+    }
+
+    .msg-sender {
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 3px;
+      color: #ff4b6e;
+    }
+
+    .msg-sent .msg-sender {
+      display: none;
+    }
+
+    .chat-input-bar {
       padding: 12px;
-      background: #f9f9f9;
+      background: #fff;
       border-top: 1px solid #eee;
+      display: flex;
       gap: 8px;
     }
 
-    .chat-input-container input {
+    .chat-input-bar input {
       flex: 1;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
+      padding: 12px 16px;
+      border: 1px solid #e0e0e0;
+      border-radius: 25px;
       outline: none;
-      /* ইনপুট বক্সে যাতে ইউজার লিখতে পারে সেটার সিলেকশন অন রাখা হলো */
+      font-size: 14px;
       -webkit-user-select: text;
       user-select: text;
     }
 
-    .chat-input-container button {
+    .chat-input-bar button {
       background: #ff4b6e;
       color: white;
       border: none;
       padding: 0 18px;
-      border-radius: 8px;
+      border-radius: 25px;
       font-weight: bold;
       cursor: pointer;
     }
 
-    .hidden {
-      display: none !important;
+    /* প্রোফাইল ও সেটিং পেজ */
+    .profile-card, .settings-card {
+      padding: 25px;
+      text-align: center;
     }
+
+    .profile-avatar {
+      width: 90px;
+      height: 90px;
+      background: #ff4b6e;
+      color: white;
+      font-size: 36px;
+      font-weight: bold;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 20px auto 10px auto;
+    }
+
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: bold;
+      width: 100%;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+
+    /* বটম নেভিগেশন বার */
+    .bottom-nav {
+      display: flex;
+      background: #ffffff;
+      border-top: 1px solid #eee;
+      height: 60px;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #888;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .nav-item.active {
+      color: #ff4b6e;
+    }
+
+    .nav-item svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+      margin-bottom: 2px;
+    }
+
+    .hidden { display: none !important; }
   </style>
 </head>
-<body oncontextmenu="return false;"> <!-- রাইট ক্লিক বা লং প্রেস মেনু বন্ধ -->
+<body oncontextmenu="return false;">
 
   <div class="app-container">
-    <header>Group Message</header>
 
-    <!-- ১. লগইন স্ক্রিন -->
+    <!-- ১. এিমেটেড স্প্ল্যাশ স্ক্রিন -->
+    <div id="splash-screen">
+      <div class="app-logo-animated">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      </div>
+      <h1>Group Community</h1>
+    </div>
+
+    <!-- ২. ইমেল ও পাসওয়ার্ড লগইন / রেজিস্ট্রেশন স্ক্রিন -->
     <div id="auth-screen">
-      <h2>Welcome Back</h2>
-      <p>Group Message অ্যাপে যুক্ত হতে গুগলে ক্লিক করুন</p>
-      
-      <button class="btn-google" onclick="loginWithGoogle()">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20" alt="Google">
-        Sign in with Google
-      </button>
+      <div class="auth-card">
+        <div class="auth-icon">
+          <svg width="35" height="35" viewBox="0 0 24 24" fill="#ff4b6e"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        <div class="auth-title" id="auth-heading">Welcome Back</div>
+        <div class="auth-subtitle" id="auth-subheading">Sign in to your account</div>
+
+        <div class="input-group hidden" id="name-group">
+          <input type="text" id="reg-name" class="input-field" placeholder="Full Name">
+        </div>
+
+        <div class="input-group">
+          <input type="email" id="auth-email" class="input-field" placeholder="Email Address">
+        </div>
+
+        <div class="input-group">
+          <input type="password" id="auth-password" class="input-field" placeholder="Password">
+        </div>
+
+        <button class="btn-primary" id="auth-btn" onclick="handleAuth()">LOG IN</button>
+
+        <div class="toggle-auth" id="toggle-btn" onclick="toggleAuthMode()">New here? Create Account</div>
+      </div>
     </div>
 
-    <!-- ২. মূল অ্যাপ স্ক্রিন -->
-    <div id="chat-screen">
-      <div class="user-bar">
-        <span id="user-display-name">User</span>
-        <button class="logout-btn" onclick="logout()">Logout</button>
+    <!-- ৩. মূল অ্যাপ্লিকেশন (চ্যাট, প্রোফাইল, সেটিং) -->
+    <div id="main-app">
+      <header id="header-title">Group Chat</header>
+
+      <div class="content-area">
+        <!-- চ্যাট পেজ -->
+        <div id="tab-chat" class="tab-page active">
+          <div class="message-list" id="message-list"></div>
+          <div class="chat-input-bar">
+            <input type="text" id="msg-input" placeholder="Type a message...">
+            <button onclick="sendMessage()">Send</button>
+          </div>
+        </div>
+
+        <!-- প্রোফাইল পেজ -->
+        <div id="tab-profile" class="tab-page">
+          <div class="profile-card">
+            <div class="profile-avatar" id="prof-avatar">U</div>
+            <h2 id="prof-name">User Name</h2>
+            <p id="prof-email" style="color:#777; margin-top: 5px;">user@example.com</p>
+            <button class="btn-danger" onclick="logout()">LOGOUT</button>
+          </div>
+        </div>
+
+        <!-- সেটিং পেজ -->
+        <div id="tab-settings" class="tab-page">
+          <div class="settings-card">
+            <h3>App Settings</h3>
+            <p style="color:#666; margin-top: 15px;">Version: 1.0.0 (Live System)</p>
+            <p style="color:#666; margin-top: 8px;">Real-time Firestore Database Connected</p>
+          </div>
+        </div>
       </div>
 
-      <div class="message-area" id="message-container">
-        <p style="text-align: center; color: #888; margin-top: 20px;">Welcome to Group Message! 🚀</p>
-      </div>
-
-      <div class="chat-input-container">
-        <input type="text" id="msg-input" placeholder="Type a message...">
-        <button onclick="sendMessage()">Send</button>
+      <!-- নেভিগেশন বার -->
+      <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('chat', 'Group Chat', this)">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          Chat
+        </div>
+        <div class="nav-item" onclick="switchTab('profile', 'My Profile', this)">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          Profile
+        </div>
+        <div class="nav-item" onclick="switchTab('settings', 'Settings', this)">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          Settings
+        </div>
       </div>
     </div>
+
   </div>
 
   <script>
-    // ⚙️ আপনার সঠিক Firebase Config
+    // ⚙️ আপনার সঠিক Firebase Config বসান
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "group-message-83a18.firebaseapp.com",
@@ -208,49 +457,137 @@
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    const db = firebase.firestore();
 
+    let isSignUp = false;
+
+    // ১. স্প্ল্যাশ স্ক্রিন এনিমেশন টাইমার
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        splash.style.opacity = '0';
+        setTimeout(() => splash.style.display = 'none', 600);
+      }, 2000);
+    });
+
+    // ২. লগইন / সাইনআপ মোড টগল
+    function toggleAuthMode() {
+      isSignUp = !isSignUp;
+      document.getElementById('name-group').classList.toggle('hidden', !isSignUp);
+      document.getElementById('auth-heading').innerText = isSignUp ? "Create Account" : "Welcome Back";
+      document.getElementById('auth-subheading').innerText = isSignUp ? "Fill the form to get started" : "Sign in to your account";
+      document.getElementById('auth-btn').innerText = isSignUp ? "SIGN UP" : "LOG IN";
+      document.getElementById('toggle-btn').innerText = isSignUp ? "Already have an account? Log In" : "New here? Create Account";
+    }
+
+    // ৩. সাইনআপ ও লগইন হ্যান্ডলার
+    function handleAuth() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value.trim();
+      const name = document.getElementById('reg-name').value.trim();
+
+      if (!email || !password) {
+        alert("দয়া করে ইমেইল এবং পাসওয়ার্ড দিন!");
+        return;
+      }
+
+      if (isSignUp) {
+        if (!name) { alert("আপনার পূর্ণ নাম দিন!"); return; }
+        auth.createUserWithEmailAndPassword(email, password)
+          .then((cred) => {
+            return cred.user.updateProfile({ displayName: name });
+          })
+          .catch((err) => alert(err.message));
+      } else {
+        auth.signInWithEmailAndPassword(email, password)
+          .catch((err) => alert(err.message));
+      }
+    }
+
+    // ৪. অথেন্টিকেশন স্টেট পরিবর্তন
     auth.onAuthStateChanged((user) => {
       if (user) {
         document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('chat-screen').style.display = 'flex';
-        document.getElementById('user-display-name').innerText = user.displayName || user.email;
+        document.getElementById('main-app').style.display = 'flex';
+        
+        // প্রোফাইল তথ্য আপডেট
+        const name = user.displayName || user.email.split('@')[0];
+        document.getElementById('prof-name').innerText = name;
+        document.getElementById('prof-email').innerText = user.email;
+        document.getElementById('prof-avatar').innerText = name.charAt(0).toUpperCase();
+
+        // মেসেজ লোড শুরু
+        loadRealtimeMessages();
       } else {
         document.getElementById('auth-screen').classList.remove('hidden');
-        document.getElementById('chat-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'none';
       }
     });
 
-    // Google Sign In (Error Alert সহ)
-    function loginWithGoogle() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch((error) => {
-        // যদি পপআপ ব্লকে আটকে যায়, রিডাইরেক্ট ট্রাই করবে
-        if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-          auth.signInWithRedirect(provider);
-        } else {
-          alert("এরর মেসেজ: " + error.message);
-        }
-      });
+    // ৫. রিয়েল-টাইম Firestore চ্যাট
+    function loadRealtimeMessages() {
+      db.collection("messages").orderBy("timestamp", "asc")
+        .onSnapshot((snapshot) => {
+          const list = document.getElementById('message-list');
+          list.innerHTML = "";
+          const currentUser = auth.currentUser;
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const isMe = currentUser && data.senderId === currentUser.uid;
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+
+            if (!isMe) {
+              const senderDiv = document.createElement('div');
+              senderDiv.className = 'msg-sender';
+              senderDiv.innerText = data.senderName || 'Member';
+              msgDiv.appendChild(senderDiv);
+            }
+
+            const textNode = document.createTextNode(data.text);
+            msgDiv.appendChild(textNode);
+            list.appendChild(msgDiv);
+          });
+
+          list.scrollTop = list.scrollHeight;
+        });
     }
 
-    function logout() {
-      auth.signOut();
-    }
-
+    // ৬. মেসেজ পাঠানো
     function sendMessage() {
       const input = document.getElementById('msg-input');
-      const msg = input.value.trim();
-      if(msg !== "") {
-        const msgContainer = document.getElementById('message-container');
-        const p = document.createElement('p');
-        p.style.background = "#ffe5ec";
-        p.style.padding = "8px 12px";
-        p.style.borderRadius = "8px";
-        p.style.alignSelf = "flex-end";
-        p.innerText = msg;
-        msgContainer.appendChild(p);
-        input.value = "";
+      const text = input.value.trim();
+      const user = auth.currentUser;
+
+      if (text !== "" && user) {
+        db.collection("messages").add({
+          text: text,
+          senderId: user.uid,
+          senderName: user.displayName || user.email.split('@')[0],
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+          input.value = "";
+        }).catch((err) => {
+          alert("Error sending message: " + err.message);
+        });
       }
+    }
+
+    // ৭. ট্যাব স্যুইচিং
+    function switchTab(tabId, title, element) {
+      document.querySelectorAll('.tab-page').forEach(page => page.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+
+      document.getElementById('tab-' + tabId).classList.add('active');
+      element.classList.add('active');
+      document.getElementById('header-title').innerText = title;
+    }
+
+    // ৮. লগআউট
+    function logout() {
+      auth.signOut();
     }
   </script>
 </body>
