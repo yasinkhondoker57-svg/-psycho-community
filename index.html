@@ -1,595 +1,1492 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Group Message</title>
-  
-  <!-- Firebase SDKs (Compat Version) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Group Community</title>
+<link rel="icon" href="data:,">
 
-  <style>
-    /* ১. লং প্রেস ও টেক্সট সিলেকশন সম্পূর্ণ বন্ধ */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
-      -webkit-touch-callout: none;
-    }
+<!-- ============================================================
+     FIREBASE SDKs (v9 Compat)
+     ============================================================ -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-    body {
-      background-color: #f4f6f9;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
+<style>
+  :root{
+    --accent:#ff4b6e;
+    --accent-dark:#e63958;
+    --accent-light:#ffe4ea;
+    --bg:#f5f6f8;
+    --surface:#ffffff;
+    --text:#1c1f26;
+    --text-muted:#8a8f9a;
+    --border:#ececef;
+    --danger:#e0304a;
+    --success:#2bb673;
+    --radius:16px;
+    --radius-sm:10px;
+    --shadow:0 2px 10px rgba(20,20,30,0.06);
+    --nav-h:64px;
+    --header-h:56px;
+  }
 
-    .app-container {
-      width: 100%;
-      max-width: 480px;
-      background: #ffffff;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-    }
+  *{box-sizing:border-box; margin:0; padding:0;}
 
-    /* ২. প্রারম্ভিক স্প্ল্যাশ স্ক্রিন এনিমেশন */
-    #splash-screen {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(135deg, #ff4b6e, #ff758c);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
-      color: white;
-      transition: opacity 0.6s ease, visibility 0.6s;
-    }
+  html,body{
+    height:100%;
+    overscroll-behavior-y: contain;
+  }
 
-    .app-logo-animated {
-      width: 80px;
-      height: 80px;
-      background: white;
-      border-radius: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-      animation: bounce 1.8s infinite alternate;
-    }
+  body{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-tap-highlight-color: transparent;
+  }
 
-    .app-logo-animated svg {
-      fill: #ff4b6e;
-      width: 45px;
-      height: 45px;
-    }
+  /* ---------- Global security / UX lockdowns ---------- */
+  * {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none; /* disables iOS long-press menu */
+  }
+  input, textarea{
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  img{ -webkit-user-drag: none; user-drag: none; }
 
-    @keyframes bounce {
-      0% { transform: translateY(0) scale(1); }
-      100% { transform: translateY(-15px) scale(1.05); }
-    }
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-thumb{ background:#d9dce2; border-radius:10px; }
 
-    #splash-screen h1 {
-      margin-top: 20px;
-      font-size: 26px;
-      font-weight: 700;
-      letter-spacing: 1px;
-    }
+  button, input, textarea{
+    font-family: inherit;
+    outline: none;
+    border: none;
+    background: none;
+  }
 
-    /* ৩. লগইন / সাইনআপ UI */
-    #auth-screen {
-      flex: 1;
-      padding: 30px 25px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-    }
+  a{ color: inherit; text-decoration:none; }
 
-    .auth-card {
-      width: 100%;
-      text-align: center;
-    }
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    height:100vh;
+    height:100dvh;
+    position:relative;
+    background:var(--bg);
+    overflow:hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.06);
+  }
 
-    .auth-icon {
-      width: 70px;
-      height: 70px;
-      background: #ffe5ec;
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 20px auto;
-    }
+  .screen{
+    position:absolute;
+    inset:0;
+    display:none;
+    flex-direction:column;
+    height:100%;
+  }
+  .screen.active{ display:flex; }
 
-    .auth-title {
-      font-size: 24px;
-      font-weight: 800;
-      color: #222;
-      margin-bottom: 6px;
-    }
+  /* ============================================================
+     SPLASH SCREEN
+     ============================================================ */
+  #splashScreen{
+    background: linear-gradient(160deg, var(--accent) 0%, var(--accent-dark) 100%);
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+  }
+  .splash-logo{
+    width:88px; height:88px;
+    border-radius:26px;
+    background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:40px;
+    font-weight:800;
+    color:var(--accent);
+    box-shadow:0 10px 30px rgba(0,0,0,0.18);
+    animation: splashPop 0.7s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  .splash-title{
+    color:#fff;
+    font-weight:700;
+    font-size:22px;
+    margin-top:18px;
+    letter-spacing:0.3px;
+    opacity:0;
+    animation: splashFadeUp 0.6s ease 0.35s forwards;
+  }
+  .splash-sub{
+    color:rgba(255,255,255,0.85);
+    font-size:13px;
+    margin-top:6px;
+    opacity:0;
+    animation: splashFadeUp 0.6s ease 0.5s forwards;
+  }
+  .splash-wrap{ display:flex; flex-direction:column; align-items:center; }
+  @keyframes splashPop{
+    0%{ transform:scale(0.4) rotate(-10deg); opacity:0; }
+    100%{ transform:scale(1) rotate(0deg); opacity:1; }
+  }
+  @keyframes splashFadeUp{
+    0%{ opacity:0; transform:translateY(10px); }
+    100%{ opacity:1; transform:translateY(0); }
+  }
 
-    .auth-subtitle {
-      font-size: 13px;
-      color: #888;
-      margin-bottom: 25px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
+  /* ============================================================
+     AUTH SCREEN
+     ============================================================ */
+  #authScreen{
+    background:var(--surface);
+    padding:32px 24px;
+    justify-content:center;
+    overflow-y:auto;
+  }
+  .auth-logo{
+    width:64px; height:64px;
+    border-radius:20px;
+    background:var(--accent);
+    color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:28px;
+    margin:0 auto 16px;
+  }
+  .auth-heading{
+    text-align:center;
+    font-size:22px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .auth-subheading{
+    text-align:center;
+    font-size:13.5px;
+    color:var(--text-muted);
+    margin-top:6px;
+    margin-bottom:28px;
+  }
+  .field-group{ margin-bottom:14px; }
+  .field-label{
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--text-muted);
+    margin-bottom:6px;
+    display:block;
+  }
+  .field-input{
+    width:100%;
+    padding:13px 14px;
+    background:#f5f6f8;
+    border:1.5px solid transparent;
+    border-radius:var(--radius-sm);
+    font-size:14.5px;
+    color:var(--text);
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .field-input:focus{
+    border-color:var(--accent);
+    background:#fff;
+  }
+  .btn-primary{
+    width:100%;
+    padding:14px;
+    background:var(--accent);
+    color:#fff;
+    font-weight:700;
+    font-size:15px;
+    border-radius:var(--radius-sm);
+    margin-top:8px;
+    cursor:pointer;
+    transition:background .15s ease, transform .05s ease;
+  }
+  .btn-primary:active{ transform:scale(0.98); }
+  .btn-primary:disabled{ opacity:0.6; }
+  .btn-primary.danger{ background:var(--danger); }
 
-    .input-group {
-      margin-bottom: 15px;
-      text-align: left;
-    }
+  .auth-toggle{
+    text-align:center;
+    margin-top:20px;
+    font-size:13.5px;
+    color:var(--text-muted);
+  }
+  .auth-toggle span{
+    color:var(--accent);
+    font-weight:700;
+    cursor:pointer;
+  }
+  .auth-error{
+    background:#fff0f2;
+    color:var(--danger);
+    font-size:12.5px;
+    padding:10px 12px;
+    border-radius:var(--radius-sm);
+    margin-bottom:14px;
+    display:none;
+    font-weight:600;
+  }
 
-    .input-field {
-      width: 100%;
-      padding: 14px 16px;
-      background: #f8f9fa;
-      border: 1.5px solid #e9ecef;
-      border-radius: 12px;
-      font-size: 15px;
-      color: #333;
-      outline: none;
-      transition: all 0.2s ease;
-      -webkit-user-select: text;
-      user-select: text;
-    }
+  /* ============================================================
+     MAIN APP SHELL (header + content + bottom nav)
+     ============================================================ */
+  #mainScreen{ background:var(--bg); }
 
-    .input-field:focus {
-      border-color: #ff4b6e;
-      background: #fff;
-    }
+  .app-header{
+    height:var(--header-h);
+    min-height:var(--header-h);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 16px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    z-index:5;
+  }
+  .app-header h1{
+    font-size:17px;
+    font-weight:700;
+  }
+  .header-status{
+    display:flex; align-items:center; gap:6px;
+    font-size:11.5px;
+    color:var(--text-muted);
+    font-weight:600;
+  }
+  .dot{
+    width:7px; height:7px; border-radius:50%;
+    background:var(--success);
+  }
+  .dot.offline{ background:var(--text-muted); }
 
-    .btn-primary {
-      width: 100%;
-      padding: 15px;
-      background: linear-gradient(135deg, #ff4b6e, #ff6b8b);
-      border: none;
-      border-radius: 12px;
-      color: white;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      margin-top: 10px;
-      box-shadow: 0 4px 15px rgba(255, 75, 110, 0.3);
-    }
+  .tab-content{
+    flex:1;
+    overflow:hidden;
+    display:none;
+    flex-direction:column;
+  }
+  .tab-content.active{ display:flex; }
 
-    .toggle-auth {
-      margin-top: 20px;
-      font-size: 14px;
-      color: #ff4b6e;
-      font-weight: 600;
-      cursor: pointer;
-    }
+  /* ---------- Chat tab ---------- */
+  #chatMessages{
+    flex:1;
+    overflow-y:auto;
+    padding:14px 12px 10px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .msg-row{ display:flex; flex-direction:column; max-width:78%; }
+  .msg-row.mine{ align-self:flex-end; align-items:flex-end; }
+  .msg-row.theirs{ align-self:flex-start; align-items:flex-start; }
 
-    /* ৪. মেইন অ্যাপ UI */
-    #main-app {
-      display: none;
-      flex-direction: column;
-      height: 100%;
-    }
+  .msg-sender{
+    font-size:11.5px;
+    font-weight:700;
+    color:var(--accent);
+    margin-bottom:3px;
+    padding:0 4px;
+  }
+  .msg-bubble{
+    padding:10px 13px;
+    border-radius:16px;
+    font-size:14.5px;
+    line-height:1.4;
+    word-wrap:break-word;
+    white-space:pre-wrap;
+    position:relative;
+  }
+  .msg-row.mine .msg-bubble{
+    background:var(--accent);
+    color:#fff;
+    border-bottom-right-radius:4px;
+  }
+  .msg-row.theirs .msg-bubble{
+    background:var(--surface);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-bottom-left-radius:4px;
+  }
+  .msg-row.announcement .msg-bubble{
+    background: linear-gradient(135deg, #fff2c4, #ffe08a);
+    color:#5c4400;
+    border:1px solid #f0cf6e;
+    font-weight:600;
+  }
+  .msg-meta{
+    display:flex; align-items:center; gap:8px;
+    margin-top:3px; padding:0 4px;
+  }
+  .msg-time{ font-size:10.5px; color:var(--text-muted); }
+  .msg-delete{
+    font-size:10.5px;
+    color:var(--danger);
+    font-weight:700;
+    cursor:pointer;
+  }
+  .announcement-tag{
+    font-size:10px;
+    font-weight:800;
+    color:#a67a00;
+    letter-spacing:0.5px;
+    margin-bottom:3px;
+  }
 
-    header {
-      background: #ff4b6e;
-      color: white;
-      padding: 16px;
-      text-align: center;
-      font-size: 18px;
-      font-weight: 700;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
+  .empty-chat{
+    margin:auto;
+    text-align:center;
+    color:var(--text-muted);
+    font-size:13.5px;
+    padding:20px;
+  }
 
-    .content-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      position: relative;
-    }
+  .chat-input-bar{
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    padding:10px 12px;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+  }
+  #chatInput{
+    flex:1;
+    max-height:100px;
+    padding:11px 15px;
+    background:#f5f6f8;
+    border-radius:20px;
+    font-size:14.5px;
+    resize:none;
+    line-height:1.35;
+  }
+  .send-btn{
+    width:42px; height:42px;
+    min-width:42px;
+    border-radius:50%;
+    background:var(--accent);
+    color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    font-size:18px;
+    transition:transform .05s ease;
+  }
+  .send-btn:active{ transform:scale(0.92); }
+  .send-btn:disabled{ opacity:0.5; }
 
-    .tab-page {
-      display: none;
-      flex-direction: column;
-      height: 100%;
-      width: 100%;
-    }
+  .admin-bar{
+    display:flex;
+    gap:8px;
+    padding:8px 12px;
+    background:#fff8ea;
+    border-bottom:1px solid #f0e0b0;
+    overflow-x:auto;
+  }
+  .admin-chip{
+    font-size:11.5px;
+    font-weight:700;
+    color:#8a6400;
+    background:#ffedb8;
+    padding:6px 12px;
+    border-radius:20px;
+    white-space:nowrap;
+    cursor:pointer;
+  }
 
-    .tab-page.active {
-      display: flex;
-    }
+  /* ---------- Profile tab ---------- */
+  .tab-scroll{ flex:1; overflow-y:auto; padding:24px 20px; }
+  .profile-header{
+    display:flex; flex-direction:column; align-items:center;
+    padding:10px 0 26px;
+  }
+  .avatar-circle{
+    width:84px; height:84px;
+    border-radius:50%;
+    background:var(--accent);
+    color:#fff;
+    font-size:30px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:14px;
+    box-shadow:0 6px 18px rgba(255,75,110,0.3);
+  }
+  .profile-name{ font-size:18px; font-weight:700; }
+  .profile-email{ font-size:13.5px; color:var(--text-muted); margin-top:3px; }
+  .admin-badge{
+    margin-top:8px;
+    font-size:11px;
+    font-weight:800;
+    color:#fff;
+    background:#5b4bff;
+    padding:4px 11px;
+    border-radius:20px;
+    letter-spacing:0.4px;
+  }
+  .info-card{
+    background:var(--surface);
+    border-radius:var(--radius);
+    padding:4px 4px;
+    box-shadow:var(--shadow);
+    margin-bottom:16px;
+  }
+  .info-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 16px;
+    border-bottom:1px solid var(--border);
+    font-size:14px;
+  }
+  .info-row:last-child{ border-bottom:none; }
+  .info-row .label{ color:var(--text-muted); }
+  .info-row .value{ font-weight:600; }
 
-    /* চ্যাট সিস্টেম */
-    .message-list {
-      flex: 1;
-      padding: 15px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      background: #fdfbfb;
-    }
+  .btn-logout{
+    width:100%;
+    padding:14px;
+    background:#fff0f2;
+    color:var(--danger);
+    font-weight:700;
+    font-size:14.5px;
+    border-radius:var(--radius-sm);
+    cursor:pointer;
+    margin-top:6px;
+  }
 
-    .message-bubble {
-      max-width: 80%;
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-size: 14px;
-      line-height: 1.4;
-      word-wrap: break-word;
-    }
+  .section-title{
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--text-muted);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    margin:18px 4px 8px;
+  }
 
-    .msg-received {
-      background: #ffffff;
-      align-self: flex-start;
-      border: 1px solid #eee;
-      border-bottom-left-radius: 2px;
-      color: #333;
-    }
+  /* ---------- Admin panel (inside Settings) ---------- */
+  .banned-user-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 16px;
+    border-bottom:1px solid var(--border);
+    font-size:13.5px;
+  }
+  .banned-user-row:last-child{ border-bottom:none; }
+  .pill-btn{
+    font-size:11.5px;
+    font-weight:700;
+    padding:6px 12px;
+    border-radius:20px;
+    cursor:pointer;
+  }
+  .pill-btn.unban{ background:var(--accent-light); color:var(--accent-dark); }
+  .pill-btn.send{ background:var(--accent); color:#fff; }
 
-    .msg-sent {
-      background: #ff4b6e;
-      color: white;
-      align-self: flex-end;
-      border-bottom-right-radius: 2px;
-    }
+  /* ============================================================
+     BOTTOM NAVIGATION
+     ============================================================ */
+  .bottom-nav{
+    height:var(--nav-h);
+    display:flex;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-btn{
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px;
+    cursor:pointer;
+    color:var(--text-muted);
+  }
+  .nav-btn.active{ color:var(--accent); }
+  .nav-icon{ font-size:21px; line-height:1; }
+  .nav-label{ font-size:10.5px; font-weight:600; }
 
-    .msg-sender {
-      font-size: 11px;
-      font-weight: bold;
-      margin-bottom: 3px;
-      color: #ff4b6e;
-    }
+  /* ============================================================
+     TOASTS
+     ============================================================ */
+  #toastContainer{
+    position:absolute;
+    top:14px; left:0; right:0;
+    display:flex; flex-direction:column; align-items:center;
+    gap:8px;
+    z-index:1000;
+    pointer-events:none;
+    padding:0 16px;
+  }
+  .toast{
+    background:#1c1f26;
+    color:#fff;
+    font-size:13px;
+    font-weight:600;
+    padding:11px 18px;
+    border-radius:30px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.2);
+    opacity:0;
+    transform:translateY(-14px);
+    animation: toastIn 0.25s ease forwards;
+    max-width:100%;
+  }
+  .toast.success{ background:#1f7a4d; }
+  .toast.error{ background:var(--danger); }
+  .toast.hide{ animation: toastOut 0.25s ease forwards; }
+  @keyframes toastIn{ to{ opacity:1; transform:translateY(0); } }
+  @keyframes toastOut{ to{ opacity:0; transform:translateY(-14px); } }
 
-    .msg-sent .msg-sender {
-      display: none;
-    }
+  /* ---------- Confirm modal ---------- */
+  #modalOverlay{
+    position:absolute; inset:0;
+    background:rgba(20,20,30,0.45);
+    z-index:900;
+    display:none;
+    align-items:flex-end;
+  }
+  #modalOverlay.active{ display:flex; }
+  .modal-sheet{
+    width:100%;
+    background:var(--surface);
+    border-radius:20px 20px 0 0;
+    padding:22px 20px calc(22px + env(safe-area-inset-bottom));
+    animation: sheetUp 0.25s ease forwards;
+  }
+  @keyframes sheetUp{
+    from{ transform:translateY(100%); }
+    to{ transform:translateY(0); }
+  }
+  .modal-title{ font-size:16px; font-weight:700; margin-bottom:6px; }
+  .modal-text{ font-size:13.5px; color:var(--text-muted); margin-bottom:18px; }
+  .modal-actions{ display:flex; gap:10px; }
+  .modal-actions button{
+    flex:1; padding:13px; border-radius:var(--radius-sm); font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .modal-cancel{ background:#f0f1f4; color:var(--text); }
+  .modal-confirm{ background:var(--danger); color:#fff; }
 
-    .chat-input-bar {
-      padding: 12px;
-      background: #fff;
-      border-top: 1px solid #eee;
-      display: flex;
-      gap: 8px;
-    }
-
-    .chat-input-bar input {
-      flex: 1;
-      padding: 12px 16px;
-      border: 1px solid #e0e0e0;
-      border-radius: 25px;
-      outline: none;
-      font-size: 14px;
-      -webkit-user-select: text;
-      user-select: text;
-    }
-
-    .chat-input-bar button {
-      background: #ff4b6e;
-      color: white;
-      border: none;
-      padding: 0 18px;
-      border-radius: 25px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    /* প্রোফাইল ও সেটিং পেজ */
-    .profile-card, .settings-card {
-      padding: 25px;
-      text-align: center;
-    }
-
-    .profile-avatar {
-      width: 90px;
-      height: 90px;
-      background: #ff4b6e;
-      color: white;
-      font-size: 36px;
-      font-weight: bold;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 20px auto 10px auto;
-    }
-
-    .btn-danger {
-      background: #dc3545;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-weight: bold;
-      width: 100%;
-      margin-top: 20px;
-      cursor: pointer;
-    }
-
-    /* বটম নেভিগেশন বার */
-    .bottom-nav {
-      display: flex;
-      background: #ffffff;
-      border-top: 1px solid #eee;
-      height: 60px;
-    }
-
-    .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #888;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .nav-item.active {
-      color: #ff4b6e;
-    }
-
-    .nav-item svg {
-      width: 22px;
-      height: 22px;
-      fill: currentColor;
-      margin-bottom: 2px;
-    }
-
-    .hidden { display: none !important; }
-  </style>
+  .loading-spinner{
+    width:20px; height:20px;
+    border-radius:50%;
+    border:2.5px solid rgba(255,255,255,0.4);
+    border-top-color:#fff;
+    animation: spin 0.7s linear infinite;
+    display:inline-block;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+</style>
 </head>
-<body oncontextmenu="return false;">
+<body>
 
-  <div class="app-container">
+<div id="app">
 
-    <!-- ১. এিমেটেড স্প্ল্যাশ স্ক্রিন -->
-    <div id="splash-screen">
-      <div class="app-logo-animated">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-      </div>
-      <h1>Group Community</h1>
-    </div>
+  <!-- ============================================================
+       TOASTS + MODAL (global overlays)
+       ============================================================ -->
+  <div id="toastContainer"></div>
 
-    <!-- ২. ইমেল ও পাসওয়ার্ড লগইন / রেজিস্ট্রেশন স্ক্রিন -->
-    <div id="auth-screen">
-      <div class="auth-card">
-        <div class="auth-icon">
-          <svg width="35" height="35" viewBox="0 0 24 24" fill="#ff4b6e"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-        </div>
-        <div class="auth-title" id="auth-heading">Welcome Back</div>
-        <div class="auth-subtitle" id="auth-subheading">Sign in to your account</div>
-
-        <div class="input-group hidden" id="name-group">
-          <input type="text" id="reg-name" class="input-field" placeholder="Full Name">
-        </div>
-
-        <div class="input-group">
-          <input type="email" id="auth-email" class="input-field" placeholder="Email Address">
-        </div>
-
-        <div class="input-group">
-          <input type="password" id="auth-password" class="input-field" placeholder="Password">
-        </div>
-
-        <button class="btn-primary" id="auth-btn" onclick="handleAuth()">LOG IN</button>
-
-        <div class="toggle-auth" id="toggle-btn" onclick="toggleAuthMode()">New here? Create Account</div>
+  <div id="modalOverlay">
+    <div class="modal-sheet">
+      <div class="modal-title" id="modalTitle">Are you sure?</div>
+      <div class="modal-text" id="modalText">This action cannot be undone.</div>
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modalCancelBtn">Cancel</button>
+        <button class="modal-confirm" id="modalConfirmBtn">Confirm</button>
       </div>
     </div>
+  </div>
 
-    <!-- ৩. মূল অ্যাপ্লিকেশন (চ্যাট, প্রোফাইল, সেটিং) -->
-    <div id="main-app">
-      <header id="header-title">Group Chat</header>
+  <!-- ============================================================
+       SPLASH SCREEN
+       ============================================================ -->
+  <div class="screen active" id="splashScreen">
+    <div class="splash-wrap">
+      <div class="splash-logo">GC</div>
+      <div class="splash-title">Group Community</div>
+      <div class="splash-sub">Connecting people, together.</div>
+    </div>
+  </div>
 
-      <div class="content-area">
-        <!-- চ্যাট পেজ -->
-        <div id="tab-chat" class="tab-page active">
-          <div class="message-list" id="message-list"></div>
-          <div class="chat-input-bar">
-            <input type="text" id="msg-input" placeholder="Type a message...">
-            <button onclick="sendMessage()">Send</button>
-          </div>
-        </div>
+  <!-- ============================================================
+       AUTH SCREEN
+       ============================================================ -->
+  <div class="screen" id="authScreen">
+    <div class="auth-logo">GC</div>
+    <div class="auth-heading" id="authHeading">Welcome back</div>
+    <div class="auth-subheading" id="authSubheading">Log in to continue to Group Community</div>
 
-        <!-- প্রোফাইল পেজ -->
-        <div id="tab-profile" class="tab-page">
-          <div class="profile-card">
-            <div class="profile-avatar" id="prof-avatar">U</div>
-            <h2 id="prof-name">User Name</h2>
-            <p id="prof-email" style="color:#777; margin-top: 5px;">user@example.com</p>
-            <button class="btn-danger" onclick="logout()">LOGOUT</button>
-          </div>
-        </div>
+    <div class="auth-error" id="authError"></div>
 
-        <!-- সেটিং পেজ -->
-        <div id="tab-settings" class="tab-page">
-          <div class="settings-card">
-            <h3>App Settings</h3>
-            <p style="color:#666; margin-top: 15px;">Version: 1.0.0 (Live System)</p>
-            <p style="color:#666; margin-top: 8px;">Real-time Firestore Database Connected</p>
-          </div>
+    <div class="field-group" id="nameFieldGroup" style="display:none;">
+      <label class="field-label">Full Name</label>
+      <input type="text" class="field-input" id="nameInput" placeholder="Enter your full name" autocomplete="name" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Email</label>
+      <input type="email" class="field-input" id="emailInput" placeholder="you@example.com" autocomplete="email" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Password</label>
+      <input type="password" class="field-input" id="passwordInput" placeholder="Enter your password" autocomplete="current-password" />
+    </div>
+
+    <button class="btn-primary" id="authSubmitBtn">Log In</button>
+
+    <div class="auth-toggle">
+      <span id="authToggleText">Don't have an account?</span>
+      <span id="authToggleLink">Sign Up</span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MAIN APP SCREEN
+       ============================================================ -->
+  <div class="screen" id="mainScreen">
+
+    <!-- ---------- CHAT TAB ---------- -->
+    <div class="tab-content active" id="tabChat">
+      <div class="app-header">
+        <h1>Group Chat</h1>
+        <div class="header-status">
+          <span class="dot" id="connDot"></span>
+          <span id="connText">Online</span>
         </div>
       </div>
 
-      <!-- নেভিগেশন বার -->
-      <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('chat', 'Group Chat', this)">
-          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-          Chat
+      <div class="admin-bar" id="adminBar" style="display:none;">
+        <div class="admin-chip" id="announceChip">📢 Announcement</div>
+      </div>
+
+      <div id="chatMessages">
+        <div class="empty-chat" id="emptyChat">No messages yet. Say hello to the group! 👋</div>
+      </div>
+
+      <div class="chat-input-bar">
+        <textarea id="chatInput" rows="1" placeholder="Type a message…" maxlength="1000"></textarea>
+        <div class="send-btn" id="sendBtn">➤</div>
+      </div>
+    </div>
+
+    <!-- ---------- PROFILE TAB ---------- -->
+    <div class="tab-content" id="tabProfile">
+      <div class="app-header"><h1>Profile</h1></div>
+      <div class="tab-scroll">
+        <div class="profile-header">
+          <div class="avatar-circle" id="profileAvatar">?</div>
+          <div class="profile-name" id="profileName">—</div>
+          <div class="profile-email" id="profileEmail">—</div>
+          <div class="admin-badge" id="adminBadge" style="display:none;">ADMIN</div>
         </div>
-        <div class="nav-item" onclick="switchTab('profile', 'My Profile', this)">
-          <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-          Profile
+
+        <div class="info-card">
+          <div class="info-row">
+            <span class="label">Full Name</span>
+            <span class="value" id="infoName">—</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Email</span>
+            <span class="value" id="infoEmail">—</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Account Status</span>
+            <span class="value" id="infoStatus">Active</span>
+          </div>
         </div>
-        <div class="nav-item" onclick="switchTab('settings', 'Settings', this)">
-          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6-3.6z"/></svg>
-          Settings
+
+        <button class="btn-logout" id="logoutBtn">Log Out</button>
+      </div>
+    </div>
+
+    <!-- ---------- SETTINGS TAB ---------- -->
+    <div class="tab-content" id="tabSettings">
+      <div class="app-header"><h1>Settings</h1></div>
+      <div class="tab-scroll">
+        <div class="info-card">
+          <div class="info-row">
+            <span class="label">App Version</span>
+            <span class="value">1.0.0</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Connectivity</span>
+            <span class="value" id="settingsConnStatus">Online</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Signed in as</span>
+            <span class="value" id="settingsEmail">—</span>
+          </div>
         </div>
+
+        <!-- Admin-only panel; hidden entirely for non-admin users -->
+        <div id="adminPanel" style="display:none;">
+          <div class="section-title">Admin · Banned Users</div>
+          <div class="info-card" id="bannedListCard">
+            <div class="banned-user-row"><span>No banned users</span></div>
+          </div>
+
+          <div class="section-title">Admin · Send Announcement</div>
+          <div class="info-card" style="padding:14px 16px;">
+            <textarea id="announceInput" class="field-input" rows="3" placeholder="Write an official announcement…" style="resize:none; margin-bottom:10px;"></textarea>
+            <button class="btn-primary" id="announceSendBtn">Post Announcement</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- BOTTOM NAV ---------- -->
+    <div class="bottom-nav">
+      <div class="nav-btn active" data-tab="tabChat">
+        <div class="nav-icon">💬</div>
+        <div class="nav-label">Chat</div>
+      </div>
+      <div class="nav-btn" data-tab="tabProfile">
+        <div class="nav-icon">👤</div>
+        <div class="nav-label">Profile</div>
+      </div>
+      <div class="nav-btn" data-tab="tabSettings">
+        <div class="nav-icon">⚙️</div>
+        <div class="nav-label">Settings</div>
       </div>
     </div>
 
   </div>
 
-  <script>
-    // ⚙️ আপনার আসল Firebase Config বসানো হয়েছে
-    const firebaseConfig = {
-      apiKey: "AIzaSyCRW_noSwnwWhbbuOqcVjd4BhCTNTUC4Gg",
-      authDomain: "group-message-83a18.firebaseapp.com",
-      projectId: "group-message-83a18",
-      storageBucket: "group-message-83a18.firebasestorage.app",
-      messagingSenderId: "292133778661",
-      appId: "1:292133778661:web:1e414a325da7fb4bc0d00c",
-      measurementId: "G-N6N5FV256Y"
-    };
+</div>
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+<script>
+(function(){
+  "use strict";
 
-    let isSignUp = false;
+  /* ============================================================
+     GLOBAL SECURITY LOCKDOWNS
+     Disables text selection, context menu (long-press / right click),
+     and common devtools shortcuts to raise the bar against casual
+     tampering. This is a UX/deterrence measure, NOT a substitute for
+     server-side Firestore Security Rules (see below).
+     ============================================================ */
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  document.addEventListener('selectstart', function(e){ e.preventDefault(); });
+  document.addEventListener('dragstart', function(e){ e.preventDefault(); });
+  document.addEventListener('copy', function(e){ e.preventDefault(); });
 
-    // ১. স্প্ল্যাশ স্ক্রিন এনিমেশন টাইমার
-    window.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        const splash = document.getElementById('splash-screen');
-        splash.style.opacity = '0';
-        setTimeout(() => splash.style.display = 'none', 600);
-      }, 2000);
+  /* ============================================================
+     FIREBASE CONFIGURATION
+     ============================================================ */
+  const firebaseConfig = {
+    apiKey: "AIzaSyCRW_noSwnwWhbbuOqcVjd4BhCTNTUC4Gg",
+    authDomain: "group-message-83a18.firebaseapp.com",
+    projectId: "group-message-83a18",
+    storageBucket: "group-message-83a18.firebasestorage.app",
+    messagingSenderId: "292133778661",
+    appId: "1:292133778661:web:1e414a325da7fb4bc0d00c",
+    measurementId: "G-N6N5FV256Y"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  /* ============================================================
+     ADMIN CONFIGURATION
+     Add trusted admin UIDs and/or emails here. Any user whose UID
+     or email matches will see the Admin Panel and admin controls.
+
+     ⚠️ IMPORTANT: Client-side admin checks are for UI/UX only.
+     You MUST mirror this exact list inside your Firestore Security
+     Rules (see the rules block below) or a malicious user could
+     call Firestore directly and bypass the UI entirely.
+     ============================================================ */
+  const ADMIN_UIDS = [
+    // "PASTE_ADMIN_USER_UID_HERE"
+  ];
+  const ADMIN_EMAILS = [
+    // "admin@example.com"
+  ];
+
+  function isAdminUser(user){
+    if (!user) return false;
+    if (ADMIN_UIDS.includes(user.uid)) return true;
+    if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
+    return false;
+  }
+
+  /* ============================================================
+     FIRESTORE SCHEMA (for reference)
+     ------------------------------------------------------------
+     users/{uid}
+       - name: string
+       - email: string
+       - createdAt: timestamp
+       - banned: boolean
+
+     messages/{messageId}
+       - text: string
+       - senderId: string
+       - senderName: string
+       - timestamp: server timestamp
+       - isAnnouncement: boolean
+     ============================================================ */
+
+  /* ============================================================
+     🔒 FIRESTORE SECURITY RULES — CONFIGURE IN FIREBASE CONSOLE
+     (Firestore Database → Rules). Paste something like this,
+     replacing the admin list with your real admin UIDs:
+
+     rules_version = '2';
+     service cloud.firestore {
+       match /databases/{database}/documents {
+
+         function isSignedIn() {
+           return request.auth != null;
+         }
+         function isAdmin() {
+           return isSignedIn() && (
+             request.auth.uid in ['ADMIN_UID_1','ADMIN_UID_2'] ||
+             request.auth.token.email in ['admin@example.com']
+           );
+         }
+         function isNotBanned() {
+           return isSignedIn() &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.banned == false;
+         }
+
+         match /users/{userId} {
+           allow read: if isSignedIn();
+           allow create: if isSignedIn() && request.auth.uid == userId;
+           allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+           allow delete: if isAdmin();
+         }
+
+         match /messages/{messageId} {
+           allow read: if isSignedIn();
+           allow create: if isSignedIn() && isNotBanned() &&
+             request.resource.data.senderId == request.auth.uid &&
+             (request.resource.data.isAnnouncement == false || isAdmin());
+           allow delete: if isAdmin();
+           allow update: if false;
+         }
+       }
+     }
+     ============================================================ */
+
+  /* ============================================================
+     🔒 FIRESTORE INDEXES — CONFIGURE IN FIREBASE CONSOLE
+     (Firestore Database → Indexes) if prompted by the console:
+       Collection: messages
+       Fields indexed: timestamp (Ascending)
+     Firestore usually prompts with a direct link in the browser
+     console the first time the ordered query runs — click it to
+     auto-create the index.
+     ============================================================ */
+
+  /* ============================================================
+     STATE
+     ============================================================ */
+  let currentUser = null;
+  let currentUserData = null;
+  let isSignUpMode = false;
+  let messagesUnsub = null;
+  let bannedUnsub = null;
+  let currentAdmin = false;
+  let firstLoad = true;
+
+  /* ============================================================
+     DOM REFS
+     ============================================================ */
+  const $ = (id) => document.getElementById(id);
+
+  const splashScreen = $('splashScreen');
+  const authScreen = $('authScreen');
+  const mainScreen = $('mainScreen');
+
+  const authHeading = $('authHeading');
+  const authSubheading = $('authSubheading');
+  const nameFieldGroup = $('nameFieldGroup');
+  const nameInput = $('nameInput');
+  const emailInput = $('emailInput');
+  const passwordInput = $('passwordInput');
+  const authSubmitBtn = $('authSubmitBtn');
+  const authToggleText = $('authToggleText');
+  const authToggleLink = $('authToggleLink');
+  const authError = $('authError');
+
+  const chatMessages = $('chatMessages');
+  const emptyChat = $('emptyChat');
+  const chatInput = $('chatInput');
+  const sendBtn = $('sendBtn');
+  const adminBar = $('adminBar');
+  const announceChip = $('announceChip');
+
+  const profileAvatar = $('profileAvatar');
+  const profileName = $('profileName');
+  const profileEmail = $('profileEmail');
+  const adminBadge = $('adminBadge');
+  const infoName = $('infoName');
+  const infoEmail = $('infoEmail');
+  const logoutBtn = $('logoutBtn');
+
+  const settingsEmail = $('settingsEmail');
+  const settingsConnStatus = $('settingsConnStatus');
+  const adminPanel = $('adminPanel');
+  const bannedListCard = $('bannedListCard');
+  const announceInput = $('announceInput');
+  const announceSendBtn = $('announceSendBtn');
+
+  const connDot = $('connDot');
+  const connText = $('connText');
+
+  const toastContainer = $('toastContainer');
+  const modalOverlay = $('modalOverlay');
+  const modalTitle = $('modalTitle');
+  const modalText = $('modalText');
+  const modalCancelBtn = $('modalCancelBtn');
+  const modalConfirmBtn = $('modalConfirmBtn');
+
+  /* ============================================================
+     TOAST NOTIFICATIONS
+     ============================================================ */
+  function showToast(message, type){
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (type ? (' ' + type) : '');
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('hide');
+      setTimeout(() => toast.remove(), 250);
+    }, 2600);
+  }
+
+  /* ============================================================
+     CONFIRM MODAL (promise-based, replaces window.confirm)
+     ============================================================ */
+  function showConfirm(title, text){
+    return new Promise((resolve) => {
+      modalTitle.textContent = title;
+      modalText.textContent = text;
+      modalOverlay.classList.add('active');
+
+      function cleanup(result){
+        modalOverlay.classList.remove('active');
+        modalConfirmBtn.removeEventListener('click', onConfirm);
+        modalCancelBtn.removeEventListener('click', onCancel);
+        resolve(result);
+      }
+      function onConfirm(){ cleanup(true); }
+      function onCancel(){ cleanup(false); }
+
+      modalConfirmBtn.addEventListener('click', onConfirm);
+      modalCancelBtn.addEventListener('click', onCancel);
     });
+  }
 
-    // ২. লগইন / সাইনআপ মোড টগল
-    function toggleAuthMode() {
-      isSignUp = !isSignUp;
-      document.getElementById('name-group').classList.toggle('hidden', !isSignUp);
-      document.getElementById('auth-heading').innerText = isSignUp ? "Create Account" : "Welcome Back";
-      document.getElementById('auth-subheading').innerText = isSignUp ? "Fill the form to get started" : "Sign in to your account";
-      document.getElementById('auth-btn').innerText = isSignUp ? "SIGN UP" : "LOG IN";
-      document.getElementById('toggle-btn').innerText = isSignUp ? "Already have an account? Log In" : "New here? Create Account";
+  /* ============================================================
+     SCREEN NAVIGATION
+     ============================================================ */
+  function showScreen(id){
+    [splashScreen, authScreen, mainScreen].forEach(s => s.classList.remove('active'));
+    $(id).classList.add('active');
+  }
+
+  function showTab(tabId){
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    $(tabId).classList.add('active');
+    document.querySelector('.nav-btn[data-tab="' + tabId + '"]').classList.add('active');
+  }
+
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => showTab(btn.dataset.tab));
+  });
+
+  /* ============================================================
+     ONLINE / OFFLINE CONNECTIVITY STATUS
+     ============================================================ */
+  function updateConnectivity(){
+    const online = navigator.onLine;
+    connDot.classList.toggle('offline', !online);
+    connText.textContent = online ? 'Online' : 'Offline';
+    settingsConnStatus.textContent = online ? 'Online' : 'Offline';
+  }
+  window.addEventListener('online', () => { updateConnectivity(); showToast('Back online', 'success'); });
+  window.addEventListener('offline', () => { updateConnectivity(); showToast('You are offline', 'error'); });
+  updateConnectivity();
+
+  /* ============================================================
+     AUTH: MODE TOGGLE (Login <-> Sign Up)
+     ============================================================ */
+  function setAuthMode(signUp){
+    isSignUpMode = signUp;
+    authError.style.display = 'none';
+    if (signUp){
+      authHeading.textContent = 'Create your account';
+      authSubheading.textContent = 'Join Group Community in seconds';
+      nameFieldGroup.style.display = 'block';
+      authSubmitBtn.textContent = 'Sign Up';
+      authToggleText.textContent = 'Already have an account?';
+      authToggleLink.textContent = 'Log In';
+    } else {
+      authHeading.textContent = 'Welcome back';
+      authSubheading.textContent = 'Log in to continue to Group Community';
+      nameFieldGroup.style.display = 'none';
+      authSubmitBtn.textContent = 'Log In';
+      authToggleText.textContent = "Don't have an account?";
+      authToggleLink.textContent = 'Sign Up';
+    }
+  }
+
+  authToggleLink.addEventListener('click', () => setAuthMode(!isSignUpMode));
+
+  function showAuthError(msg){
+    authError.textContent = msg;
+    authError.style.display = 'block';
+  }
+
+  function friendlyAuthError(err){
+    const code = err && err.code ? err.code : '';
+    const map = {
+      'auth/invalid-email': 'Please enter a valid email address.',
+      'auth/user-not-found': 'No account found with this email.',
+      'auth/wrong-password': 'Incorrect password. Please try again.',
+      'auth/invalid-credential': 'Incorrect email or password.',
+      'auth/email-already-in-use': 'An account already exists with this email.',
+      'auth/weak-password': 'Password should be at least 6 characters.',
+      'auth/too-many-requests': 'Too many attempts. Please try again later.',
+      'auth/network-request-failed': 'Network error. Check your connection.'
+    };
+    return map[code] || (err && err.message) || 'Something went wrong. Please try again.';
+  }
+
+  /* ============================================================
+     AUTH: SUBMIT (Login / Sign Up)
+     ============================================================ */
+  authSubmitBtn.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    const name = nameInput.value.trim();
+
+    authError.style.display = 'none';
+
+    if (!email || !password){
+      showAuthError('Please fill in email and password.');
+      return;
+    }
+    if (isSignUpMode && !name){
+      showAuthError('Please enter your full name.');
+      return;
+    }
+    if (password.length < 6){
+      showAuthError('Password must be at least 6 characters.');
+      return;
     }
 
-    // ৩. সাইনআপ ও লগইন হ্যান্ডলার
-    function handleAuth() {
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value.trim();
-      const name = document.getElementById('reg-name').value.trim();
+    authSubmitBtn.disabled = true;
+    const originalText = authSubmitBtn.textContent;
+    authSubmitBtn.innerHTML = '<span class="loading-spinner"></span>';
 
-      if (!email || !password) {
-        alert("দয়া করে ইমেইল এবং পাসওয়ার্ড দিন!");
+    try {
+      if (isSignUpMode){
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        await db.collection('users').doc(cred.user.uid).set({
+          name: name,
+          email: email,
+          banned: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('Account created! Welcome, ' + name + '.', 'success');
+      } else {
+        await auth.signInWithEmailAndPassword(email, password);
+        showToast('Welcome back!', 'success');
+      }
+      // onAuthStateChanged will handle the redirect to the main app.
+    } catch (err){
+      showAuthError(friendlyAuthError(err));
+      authSubmitBtn.disabled = false;
+      authSubmitBtn.textContent = originalText;
+    }
+  });
+
+  /* ============================================================
+     LOGOUT
+     ============================================================ */
+  logoutBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm('Log out?', 'You will need to log in again to access your account.');
+    if (!confirmed) return;
+    try {
+      await auth.signOut();
+      showToast('Logged out successfully', 'success');
+    } catch (err){
+      showToast('Failed to log out. Please try again.', 'error');
+    }
+  });
+
+  /* ============================================================
+     SPLASH MINIMUM DISPLAY TIME
+     Ensures the splash animation is visible for at least ~1.1s
+     even if Firebase Auth resolves instantly, then hands off to
+     whichever screen onAuthStateChanged below has decided on.
+     ============================================================ */
+  let splashMinTimeElapsed = false;
+  let pendingScreen = null; // set by onAuthStateChanged once it knows the destination
+
+  function goToScreenAfterSplash(screenId, afterShow){
+    pendingScreen = { screenId: screenId, afterShow: afterShow };
+    revealPendingScreen();
+  }
+
+  function revealPendingScreen(){
+    if (!splashMinTimeElapsed || !pendingScreen) return;
+    showScreen(pendingScreen.screenId);
+    if (pendingScreen.afterShow) pendingScreen.afterShow();
+    pendingScreen = null;
+  }
+
+  setTimeout(() => { splashMinTimeElapsed = true; revealPendingScreen(); }, 1100);
+
+  /* ============================================================
+     AUTH STATE OBSERVER — auto-redirect on login/logout
+     ============================================================ */
+  auth.onAuthStateChanged(async (user) => {
+    if (user){
+      currentUser = user;
+
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists){
+          currentUserData = userDoc.data();
+        } else {
+          // Fallback profile doc if one wasn't created at sign-up time
+          currentUserData = { name: user.email.split('@')[0], email: user.email, banned: false };
+          await db.collection('users').doc(user.uid).set({
+            name: currentUserData.name,
+            email: user.email,
+            banned: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+      } catch (err){
+        currentUserData = { name: user.email.split('@')[0], email: user.email, banned: false };
+      }
+
+      if (currentUserData.banned){
+        showToast('Your account has been banned from this community.', 'error');
+        await auth.signOut();
         return;
       }
 
-      if (isSignUp) {
-        if (!name) { alert("আপনার পূর্ণ নাম দিন!"); return; }
-        auth.createUserWithEmailAndPassword(email, password)
-          .then((cred) => {
-            return cred.user.updateProfile({ displayName: name });
-          })
-          .catch((err) => alert(err.message));
-      } else {
-        auth.signInWithEmailAndPassword(email, password)
-          .catch((err) => alert(err.message));
-      }
+      currentAdmin = isAdminUser(user);
+      renderProfile();
+      attachMessagesListener();
+      if (currentAdmin) attachBannedListener();
+
+      goToScreenAfterSplash('mainScreen', () => showTab('tabChat'));
+
+    } else {
+      currentUser = null;
+      currentUserData = null;
+      currentAdmin = false;
+      detachMessagesListener();
+      detachBannedListener();
+      setAuthMode(false);
+      emailInput.value = '';
+      passwordInput.value = '';
+      nameInput.value = '';
+      authSubmitBtn.disabled = false;
+      authSubmitBtn.textContent = 'Log In';
+      goToScreenAfterSplash('authScreen');
+    }
+  });
+
+  /* ============================================================
+     PROFILE RENDERING
+     ============================================================ */
+  function getInitials(name){
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+
+  function renderProfile(){
+    if (!currentUserData) return;
+    const initials = getInitials(currentUserData.name);
+
+    profileAvatar.textContent = initials;
+    profileName.textContent = currentUserData.name;
+    profileEmail.textContent = currentUserData.email;
+    infoName.textContent = currentUserData.name;
+    infoEmail.textContent = currentUserData.email;
+    settingsEmail.textContent = currentUserData.email;
+
+    adminBadge.style.display = currentAdmin ? 'inline-block' : 'none';
+    adminBar.style.display = currentAdmin ? 'flex' : 'none';
+    adminPanel.style.display = currentAdmin ? 'block' : 'none';
+  }
+
+  /* ============================================================
+     CHAT: SEND MESSAGE
+     ============================================================ */
+  function autoResizeInput(){
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px';
+  }
+  chatInput.addEventListener('input', autoResizeInput);
+
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      sendMessage(false);
+    }
+  });
+
+  sendBtn.addEventListener('click', () => sendMessage(false));
+
+  async function sendMessage(isAnnouncement){
+    const text = (isAnnouncement ? announceInput.value : chatInput.value).trim();
+    if (!text){
+      showToast('Please type a message first.', 'error');
+      return;
+    }
+    if (!currentUser || !currentUserData) return;
+
+    if (currentUserData.banned){
+      showToast('You are banned from sending messages.', 'error');
+      return;
     }
 
-    // ৪. অথেন্টিকেশন স্টেট পরিবর্তন
-    auth.onAuthStateChanged((user) => {
-      if (user) {
-        document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('main-app').style.display = 'flex';
-        
-        // প্রোফাইল তথ্য আপডেট
-        const name = user.displayName || user.email.split('@')[0];
-        document.getElementById('prof-name').innerText = name;
-        document.getElementById('prof-email').innerText = user.email;
-        document.getElementById('prof-avatar').innerText = name.charAt(0).toUpperCase();
+    const payload = {
+      text: text,
+      senderId: currentUser.uid,
+      senderName: currentUserData.name,
+      isAnnouncement: !!isAnnouncement,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
 
-        // মেসেজ লোড শুরু
-        loadRealtimeMessages();
+    if (isAnnouncement && !currentAdmin){
+      showToast('Only admins can post announcements.', 'error');
+      return;
+    }
+
+    try {
+      if (isAnnouncement){
+        announceSendBtn.disabled = true;
       } else {
-        document.getElementById('auth-screen').classList.remove('hidden');
-        document.getElementById('main-app').style.display = 'none';
+        sendBtn.style.pointerEvents = 'none';
       }
+
+      await db.collection('messages').add(payload);
+
+      if (isAnnouncement){
+        announceInput.value = '';
+        showToast('Announcement posted!', 'success');
+      } else {
+        chatInput.value = '';
+        autoResizeInput();
+      }
+    } catch (err){
+      showToast('Failed to send message. Please try again.', 'error');
+    } finally {
+      announceSendBtn.disabled = false;
+      sendBtn.style.pointerEvents = 'auto';
+    }
+  }
+
+  announceSendBtn.addEventListener('click', () => sendMessage(true));
+  announceChip.addEventListener('click', () => {
+    showTab('tabSettings');
+    setTimeout(() => announceInput.focus(), 150);
+  });
+
+  /* ============================================================
+     CHAT: REAL-TIME MESSAGE LISTENER
+     ============================================================ */
+  function formatTime(ts){
+    if (!ts || !ts.toDate) return '';
+    const d = ts.toDate();
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12; if (hours === 0) hours = 12;
+    return hours + ':' + minutes + ' ' + ampm;
+  }
+
+  function attachMessagesListener(){
+    detachMessagesListener();
+    firstLoad = true;
+    messagesUnsub = db.collection('messages')
+      .orderBy('timestamp', 'asc')
+      .limitToLast(200)
+      .onSnapshot((snapshot) => {
+        renderMessages(snapshot.docs);
+      }, (err) => {
+        showToast('Unable to load messages. Check your connection.', 'error');
+      });
+  }
+
+  function detachMessagesListener(){
+    if (messagesUnsub){ messagesUnsub(); messagesUnsub = null; }
+    chatMessages.innerHTML = '';
+  }
+
+  function renderMessages(docs){
+    if (!docs.length){
+      chatMessages.innerHTML = '';
+      chatMessages.appendChild(emptyChat);
+      return;
+    }
+
+    const wasNearBottom = (chatMessages.scrollTop + chatMessages.clientHeight) >= (chatMessages.scrollHeight - 60);
+
+    chatMessages.innerHTML = '';
+
+    docs.forEach((doc) => {
+      const msg = doc.data();
+      const isMine = currentUser && msg.senderId === currentUser.uid;
+
+      const row = document.createElement('div');
+      row.className = 'msg-row ' + (msg.isAnnouncement ? 'announcement' : (isMine ? 'mine' : 'theirs'));
+
+      if (!isMine && !msg.isAnnouncement){
+        const senderEl = document.createElement('div');
+        senderEl.className = 'msg-sender';
+        senderEl.textContent = msg.senderName || 'Unknown';
+        row.appendChild(senderEl);
+      }
+
+      if (msg.isAnnouncement){
+        const tag = document.createElement('div');
+        tag.className = 'announcement-tag';
+        tag.textContent = '📢 OFFICIAL ANNOUNCEMENT · ' + (msg.senderName || 'Admin');
+        row.appendChild(tag);
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+      bubble.textContent = msg.text; // textContent: prevents HTML/script injection (XSS)
+      row.appendChild(bubble);
+
+      const meta = document.createElement('div');
+      meta.className = 'msg-meta';
+
+      const timeEl = document.createElement('span');
+      timeEl.className = 'msg-time';
+      timeEl.textContent = formatTime(msg.timestamp);
+      meta.appendChild(timeEl);
+
+      if (currentAdmin){
+        const delEl = document.createElement('span');
+        delEl.className = 'msg-delete';
+        delEl.textContent = 'Delete';
+        delEl.addEventListener('click', () => deleteMessage(doc.id));
+        meta.appendChild(delEl);
+      }
+
+      row.appendChild(meta);
+
+      if (currentAdmin && !msg.isAnnouncement){
+        addBanActionToRow(row, msg.senderId, msg.senderName);
+      }
+
+      chatMessages.appendChild(row);
     });
 
-    // ৫. রিয়েল-টাইম Firestore চ্যাট
-    function loadRealtimeMessages() {
-      db.collection("messages").orderBy("timestamp", "asc")
-        .onSnapshot((snapshot) => {
-          const list = document.getElementById('message-list');
-          list.innerHTML = "";
-          const currentUser = auth.currentUser;
+    if (wasNearBottom || firstLoad){
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      firstLoad = false;
+    }
+  }
 
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-            const isMe = currentUser && data.senderId === currentUser.uid;
+  /* ============================================================
+     ADMIN: DELETE MESSAGE
+     ============================================================ */
+  async function deleteMessage(messageId){
+    const confirmed = await showConfirm('Delete message?', 'This message will be permanently removed for everyone.');
+    if (!confirmed) return;
+    try {
+      await db.collection('messages').doc(messageId).delete();
+      showToast('Message deleted.', 'success');
+    } catch (err){
+      showToast('Failed to delete message.', 'error');
+    }
+  }
 
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+  /* ============================================================
+     ADMIN: BAN / UNBAN USERS
+     ------------------------------------------------------------
+     The banned list is populated from users where banned == true.
+     Admins ban a user by tapping "Ban" next to any message sender
+     (long-press alternative: tap their name is disabled globally,
+     so banning is done via the Admin Panel using senderId lookups
+     captured from recent messages).
+     ============================================================ */
+  const knownUsers = new Map(); // uid -> {name, email}
 
-            if (!isMe) {
-              const senderDiv = document.createElement('div');
-              senderDiv.className = 'msg-sender';
-              senderDiv.innerText = data.senderName || 'Member';
-              msgDiv.appendChild(senderDiv);
-            }
+  function attachBannedListener(){
+    detachBannedListener();
+    bannedUnsub = db.collection('users')
+      .onSnapshot((snapshot) => {
+        renderBannedList(snapshot.docs);
+      }, () => {
+        showToast('Unable to load user list.', 'error');
+      });
+  }
 
-            const textNode = document.createTextNode(data.text);
-            msgDiv.appendChild(textNode);
-            list.appendChild(msgDiv);
-          });
+  function detachBannedListener(){
+    if (bannedUnsub){ bannedUnsub(); bannedUnsub = null; }
+  }
 
-          list.scrollTop = list.scrollHeight;
-        });
+  function renderBannedList(docs){
+    bannedListCard.innerHTML = '';
+    const bannedDocs = docs.filter(d => d.data().banned === true);
+
+    if (!bannedDocs.length){
+      const row = document.createElement('div');
+      row.className = 'banned-user-row';
+      row.innerHTML = '<span>No banned users</span>';
+      bannedListCard.appendChild(row);
+      return;
     }
 
-    // ৬. মেসেজ পাঠানো
-    function sendMessage() {
-      const input = document.getElementById('msg-input');
-      const text = input.value.trim();
-      const user = auth.currentUser;
+    bannedDocs.forEach((doc) => {
+      const data = doc.data();
+      const row = document.createElement('div');
+      row.className = 'banned-user-row';
 
-      if (text !== "" && user) {
-        db.collection("messages").add({
-          text: text,
-          senderId: user.uid,
-          senderName: user.displayName || user.email.split('@')[0],
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-          input.value = "";
-        }).catch((err) => {
-          alert("Error sending message: " + err.message);
-        });
-      }
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = data.name || data.email || doc.id;
+      row.appendChild(nameSpan);
+
+      const unbanBtn = document.createElement('span');
+      unbanBtn.className = 'pill-btn unban';
+      unbanBtn.textContent = 'Unban';
+      unbanBtn.addEventListener('click', () => toggleBan(doc.id, false));
+      row.appendChild(unbanBtn);
+
+      bannedListCard.appendChild(row);
+    });
+  }
+
+  async function toggleBan(uid, banned){
+    try {
+      await db.collection('users').doc(uid).update({ banned: banned });
+      showToast(banned ? 'User banned.' : 'User unbanned.', 'success');
+    } catch (err){
+      showToast('Failed to update user status.', 'error');
     }
+  }
 
-    // ৭. ট্যাব স্যুইচিং
-    function switchTab(tabId, title, element) {
-      document.querySelectorAll('.tab-page').forEach(page => page.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+  /* Expose a lightweight admin action: ban the sender of a given message
+     row by uid. Hooked into each message row for admins via long-press
+     alternative — a visible "Ban sender" action next to Delete. */
+  function addBanActionToRow(row, senderId, senderName){
+    if (!currentAdmin || !senderId || (currentUser && senderId === currentUser.uid)) return;
+    const meta = row.querySelector('.msg-meta');
+    if (!meta) return;
+    const banEl = document.createElement('span');
+    banEl.className = 'msg-delete';
+    banEl.style.color = '#8a6400';
+    banEl.textContent = 'Ban';
+    banEl.addEventListener('click', async () => {
+      const confirmed = await showConfirm('Ban this user?', (senderName || 'This user') + ' will no longer be able to send messages.');
+      if (confirmed) toggleBan(senderId, true);
+    });
+    meta.appendChild(banEl);
+  }
 
-      document.getElementById('tab-' + tabId).classList.add('active');
-      element.classList.add('active');
-      document.getElementById('header-title').innerText = title;
-    }
-
-    // ৮. লগআউট
-    function logout() {
-      auth.signOut();
-    }
-  </script>
+})();
+</script>
 </body>
-</html>
+        </html>
