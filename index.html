@@ -8,14 +8,19 @@
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
+    /* টেক্সট সিলেকশন ও লং প্রেস লক করার জন্য CSS */
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      -webkit-user-select: none; /* Safari */
+      -moz-user-select: none;    /* Firefox */
+      -ms-user-select: none;     /* IE10+/Edge */
+      user-select: none;         /* Standard */
+      -webkit-touch-callout: none; /* iOS/Android Long Press Disabled */
     }
 
     body {
@@ -45,7 +50,7 @@
       font-weight: bold;
     }
 
-    /* Auth View */
+    /* Auth Screen */
     #auth-screen {
       padding: 30px 20px;
       display: flex;
@@ -83,15 +88,9 @@
       color: #444;
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      transition: all 0.2s ease;
     }
 
-    .btn-google:hover {
-      background: #f9f9f9;
-      border-color: #ccc;
-    }
-
-    /* Main App / Chat View */
+    /* Chat Screen */
     #chat-screen {
       display: none;
       flex-direction: column;
@@ -142,6 +141,9 @@
       border: 1px solid #ddd;
       border-radius: 8px;
       outline: none;
+      /* ইনপুট বক্সে যাতে ইউজার লিখতে পারে সেটার সিলেকশন অন রাখা হলো */
+      -webkit-user-select: text;
+      user-select: text;
     }
 
     .chat-input-container button {
@@ -159,7 +161,7 @@
     }
   </style>
 </head>
-<body>
+<body oncontextmenu="return false;"> <!-- রাইট ক্লিক বা লং প্রেস মেনু বন্ধ -->
 
   <div class="app-container">
     <header>Group Message</header>
@@ -175,7 +177,7 @@
       </button>
     </div>
 
-    <!-- ২. মেসেজ বা মূল অ্যাপ স্ক্রিন -->
+    <!-- ২. মূল অ্যাপ স্ক্রিন -->
     <div id="chat-screen">
       <div class="user-bar">
         <span id="user-display-name">User</span>
@@ -194,7 +196,7 @@
   </div>
 
   <script>
-    // ⚙️ আপনার ফায়ারবেস কনফিগ (যদি পরিবর্তন করতে চান)
+    // ⚙️ আপনার সঠিক Firebase Config
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "group-message-83a18.firebaseapp.com",
@@ -204,17 +206,9 @@
       appId: "YOUR_APP_ID"
     };
 
-    // Firebase ইনিশিয়ালাইজেশন
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
-    // পেজ লোড হওয়ার পর রিডাইরেক্ট রেজাল্ট চেক
-    auth.getRedirectResult().catch((error) => {
-      console.error("Login Error:", error);
-      alert("Login Error: " + error.message);
-    });
-
-    // ইউজারের লগইন স্ট্যাটাস চেক করা
     auth.onAuthStateChanged((user) => {
       if (user) {
         document.getElementById('auth-screen').classList.add('hidden');
@@ -226,18 +220,23 @@
       }
     });
 
-    // ১. Google দিয়ে লগইন (Redirect পদ্ধতি)
+    // Google Sign In (Error Alert সহ)
     function loginWithGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithRedirect(provider);
+      auth.signInWithPopup(provider).catch((error) => {
+        // যদি পপআপ ব্লকে আটকে যায়, রিডাইরেক্ট ট্রাই করবে
+        if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+          auth.signInWithRedirect(provider);
+        } else {
+          alert("এরর মেসেজ: " + error.message);
+        }
+      });
     }
 
-    // ২. লগআউট
     function logout() {
       auth.signOut();
     }
 
-    // ৩. মেসেজ পাঠানো (টেস্টের জন্য)
     function sendMessage() {
       const input = document.getElementById('msg-input');
       const msg = input.value.trim();
